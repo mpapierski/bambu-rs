@@ -1,4 +1,5 @@
 pub mod camera;
+pub(crate) mod tls;
 pub mod utils;
 
 use async_stream::try_stream;

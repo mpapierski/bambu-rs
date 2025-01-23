@@ -1,9 +1,17 @@
 mod codec;
 
-use async_native_tls::{TlsConnector, TlsStream};
+use std::sync::Arc;
+
 use codec::JpegCodec;
+use rustls::{
+    pki_types::{IpAddr, ServerName},
+    ClientConfig,
+};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
+use tokio_rustls::{client::TlsStream, TlsConnector};
 use tokio_util::codec::Framed;
+
+use crate::tls::NoVerifier;
 
 /// Asynchronous camera client, loosely mirroring the Python example.
 pub struct CameraClient {
@@ -60,20 +68,30 @@ impl CameraClient {
         let addr = format!("{}:{}", self.hostname, self.port);
         let tcp_stream = TcpStream::connect(&addr).await?;
 
-        // 2) Wrap in tokio-native-tls for async TLS
-        let mut tls_stream = TlsConnector::new()
-            .danger_accept_invalid_certs(true)
-            .danger_accept_invalid_hostnames(true)
-            .connect(&self.hostname, tcp_stream)
+        // 2) Create a rustls ClientConfig
+        let config = ClientConfig::builder()
+            .dangerous()
+            .with_custom_certificate_verifier(Arc::new(NoVerifier))
+            .with_no_client_auth();
+
+        let config = Arc::new(config);
+        let connector = TlsConnector::from(config);
+
+        // 3) Wrap in tokio-rustls for async TLS
+        // let dnsname = DNSNameRef::try_from_ascii_str(&self.hostname)?;
+        let ip_address = IpAddr::try_from(self.hostname.as_str()).unwrap();
+        let mut tls_stream = connector
+            .connect(ServerName::IpAddress(ip_address), tcp_stream)
             .await?;
 
-        // 3) Send auth data first
+        // 4) Send auth data first
+        // tls_stream.write_all(&self.auth_packet).await?;
         tls_stream.write_all(&self.auth_packet).await?;
 
         // Flush to ensure the server receives it
         tls_stream.flush().await?;
 
-        // 4) Wrap with Framed + JpegCodec
+        // 5) Wrap with Framed + JpegCodec
         let framed = Framed::new(tls_stream, JpegCodec::default());
         Ok(framed)
     }
