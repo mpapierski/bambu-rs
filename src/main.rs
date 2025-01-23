@@ -6,7 +6,7 @@ use axum::{
     body::{Body, Bytes},
     extract::State,
     http::{header, Response},
-    response::IntoResponse,
+    response::{Html, IntoResponse},
     routing::get,
     Router,
 };
@@ -98,12 +98,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_state = Arc::new(AppState { tx, last_frame });
     let app = Router::new()
-        .route("/live", get(live_stream))
+        .route("/stream/live.mjpeg", get(mjpeg_live_stream))
+        .route(
+            "/",
+            get(|| async { Html(r#"<img src="/stream/live.mjpeg"/>"#) }),
+        )
         .with_state(app_state);
 
     // Start the Axum server
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!("Serving MJPEG on http://{}/live", addr);
+    println!("Serving content on http://{}", addr);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
     Ok(())
@@ -116,10 +120,9 @@ fn mjpeg_stream(
     // Build a streaming body using async-stream
 
     try_stream! {
-            // Send the last frame first if available
+        // Send the last frame first if available
 
         if let Some(frame) = state.last_frame.read().await.as_ref() {
-
             // --frame
             // Content-Type: image/jpeg
             // Content-Length: <len>
@@ -145,7 +148,6 @@ fn mjpeg_stream(
                 },
             };
 
-
             let header = format!(
                 "--{BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
                 frame_bytes.len()
@@ -162,7 +164,7 @@ fn mjpeg_stream(
 }
 
 /// Handler that returns an MJPEG stream.
-async fn live_stream(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+async fn mjpeg_live_stream(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     // Create a new broadcast receiver for this connection
     let rx = state.tx.subscribe();
 

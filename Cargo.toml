@@ -16,4 +16,4 @@ smallvec = "1.13.2"
 tokio = { version = "1.43.0", features = ["net", "rt", "sync", "rt-multi-thread", "tokio-macros"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 tokio-util = { version = "0.7.13", features = ["codec"] }
-turbojpeg = "1.2.1"
+turbojpeg = { version = "1.2.1", features = ["image"] }
