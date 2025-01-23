@@ -2,6 +2,7 @@ use std::io;
 
 use bytes::{Bytes, BytesMut};
 
+use memchr::memmem;
 use tokio_util::codec::{Decoder, Encoder};
 
 /// JPEG start.
@@ -15,10 +16,9 @@ const JPEG_END_MARKER: [u8; 2] = [0xff, 0xd9];
 pub struct JpegCodec(());
 
 /// Helper function to find the first occurrence of a `needle` in `haystack`.
+#[inline]
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
+    memmem::find(haystack, needle)
 }
 
 impl Decoder for JpegCodec {
@@ -43,14 +43,14 @@ impl Decoder for JpegCodec {
         // Actual end is offset from search_start
         let end_idx = search_start + end_rel_idx + JPEG_END_MARKER.len();
 
-        // 3) We now have the full [start_idx .. end_idx] inclusive
-        let frame = src[start_idx..end_idx].to_vec();
+        // 3) Remove that bytes region from `src`
+        let mut head = src.split_to(end_idx); // remove everything up to end_idx
 
-        // 4) Remove that bytes region from `src`
-        let _head = src.split_to(end_idx); // remove everything up to end_idx
+        // 4) We now have the full [start_idx .. end_idx] inclusive
+        let frame = head.split_off(start_idx);
 
-        // 5) Return the frame as Bytes
-        Ok(Some(Bytes::from(frame)))
+        // 5) Return the frame
+        Ok(Some(frame.freeze()))
     }
 }
 
@@ -130,5 +130,15 @@ mod tests {
         let frame = codec.decode(&mut src).unwrap();
         assert!(frame.is_none());
         assert_eq!(src, &b"\xff\xd8\xff\xe0hello world"[..]);
+    }
+
+    #[test]
+    fn test_decode_invalid_marker_regression() {
+        let mut codec = JpegCodec::default();
+        let mut src = BytesMut::from(&b"\xff\xd8\xff\xe0\0!AVI1\0\x01\x01\x01\0x\0x\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\xff\xdb"[..]);
+
+        let frame = codec.decode(&mut src).unwrap();
+        assert!(frame.is_none());
+        assert_eq!(src, &b"\xff\xd8\xff\xe0\0!AVI1\0\x01\x01\x01\0x\0x\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\xff\xdb"[..]);
     }
 }

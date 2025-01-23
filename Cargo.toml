@@ -10,5 +10,11 @@ axum = "0.8.1"
 bytes = "1.9.0"
 futures-core = "0.3.31"
 futures-util = "0.3.31"
-tokio = { version = "1.43.0", features = ["net", "rt-multi-thread", "tokio-macros"] }
+memchr = "2.7.4"
+tokio = { version = "1.43.0", features = ["net", "rt", "rt-multi-thread", "tokio-macros"] }
 tokio-util = { version = "0.7.13", features = ["codec"] }
+turbojpeg = "1.2.1"
+
+[dev-dependencies]
+image = "0.25.5"
+turbojpeg = { version = "1.2.1", features = ["image"] }
