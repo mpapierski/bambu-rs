@@ -11,10 +11,9 @@ bytes = "1.9.0"
 futures-core = "0.3.31"
 futures-util = "0.3.31"
 memchr = "2.7.4"
-tokio = { version = "1.43.0", features = ["net", "rt", "rt-multi-thread", "tokio-macros"] }
+once_cell = "1.20.2"
+smallvec = "1.13.2"
+tokio = { version = "1.43.0", features = ["net", "rt", "sync", "rt-multi-thread", "tokio-macros"] }
+tokio-stream = { version = "0.1.17", features = ["sync"] }
 tokio-util = { version = "0.7.13", features = ["codec"] }
 turbojpeg = "1.2.1"
-
-[dev-dependencies]
-image = "0.25.5"
-turbojpeg = { version = "1.2.1", features = ["image"] }
