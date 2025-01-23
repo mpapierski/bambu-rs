@@ -19,6 +19,8 @@ use tokio::sync::{
     RwLock,
 };
 
+const BOUNDARY: &str = "donotcrossboundary";
+
 #[derive(Clone)]
 struct AppState {
     /// We'll use a broadcast channel to send frames to all connections
@@ -125,7 +127,7 @@ fn mjpeg_stream(
             // \r\n
 
             let header = format!(
-                "--frame\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
+                "--{BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
                 frame.len()
             );
             yield Bytes::from(header);
@@ -145,7 +147,7 @@ fn mjpeg_stream(
 
 
             let header = format!(
-                "--frame\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
+                "--{BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
                 frame_bytes.len()
             );
 
@@ -168,7 +170,7 @@ async fn live_stream(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     Response::builder()
         .header(
             header::CONTENT_TYPE,
-            "multipart/x-mixed-replace; boundary=frame",
+            format!("multipart/x-mixed-replace; boundary={BOUNDARY}"),
         )
         .body(Body::from_stream(mjpeg_stream(Arc::clone(&state), rx)))
         .unwrap()
