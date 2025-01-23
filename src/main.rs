@@ -1,4 +1,6 @@
 pub mod camera;
+pub mod config;
+pub mod mqtt;
 pub(crate) mod tls;
 pub mod utils;
 
@@ -12,12 +14,17 @@ use axum::{
     Router,
 };
 use camera::CameraClient;
+use config::Config;
 use futures_core::Stream;
 use futures_util::StreamExt;
-use std::{convert::Infallible, net::SocketAddr, sync::Arc};
-use tokio::sync::{
-    broadcast::{self, Receiver},
-    RwLock,
+use mqtt::MqttClient;
+use std::{convert::Infallible, net::SocketAddr, sync::Arc, time::Duration};
+use tokio::{
+    sync::{
+        broadcast::{self, Receiver},
+        RwLock,
+    },
+    time,
 };
 
 const BOUNDARY: &str = "donotcrossboundary";
@@ -29,18 +36,12 @@ struct AppState {
     /// The last frame received from the camera.
     last_frame: Arc<RwLock<Option<Bytes>>>,
 }
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a broadcast channel with buffer size = 16 frames
     let (tx, _rx) = broadcast::channel(16);
 
-    let printer_ip = std::env::var("BAMBU_IP").expect("BAMBU_IP must be set");
-    let access_code = std::env::var("BAMBU_ACCESS_CODE").expect("BAMBU_ACCESS_CODE must be set");
-    let camera_port: u16 = std::env::var("BAMBU_PORT")
-        .unwrap_or_else(|_| "6000".to_string())
-        .parse()
-        .expect("BAMBU_PORT must be a valid u16");
+    let config = Arc::new(Config::from_env());
 
     let last_frame = Arc::new(RwLock::new(None));
 
@@ -48,8 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn({
         let tx = tx.clone();
         let last_frame = last_frame.clone();
+        let config = config.clone();
         async move {
-            let client = CameraClient::new(&printer_ip, &access_code, camera_port);
+            let client =
+                CameraClient::new(&config.printer_ip, &config.access_code, config.camera_port);
 
             let mut frame_stream = match client.connect_and_stream_codec().await {
                 Ok(stream) => stream,
@@ -94,6 +97,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(e) => eprintln!("Error receiving frame: {}", e),
                 }
             }
+        }
+    });
+
+    tokio::spawn({
+        let config = config.clone();
+        async move {
+            let mut client = MqttClient::new(
+                &config.printer_ip,
+                &config.access_code,
+                &config.serial_number,
+            );
+
+            // Start
+            client.start().await.unwrap();
+
+            println!("Connected to MQTT broker!");
+
+            // Simulate doing other things for 20 seconds
+            time::sleep(Duration::from_secs(20)).await;
+
+            // Stop
+            client.stop().await.unwrap();
         }
     });
 
