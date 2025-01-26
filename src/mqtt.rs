@@ -104,7 +104,7 @@ impl MqttClient {
                                         Packet::ConnAck(_ack) => {
                                             // "Connected" event
                                             // Subscribe to `device/{serial}/report`
-                                            let topic = format!("device/{}/report", serial);
+                                            let topic = format!("device/{}/#", serial);
                                             if let Err(e) = client.subscribe(topic.clone(), QoS::AtMostOnce).await {
                                                 eprintln!("Failed to subscribe to {}: {:?}", topic, e);
                                                 break;
@@ -112,7 +112,7 @@ impl MqttClient {
 
                                             // Notify the main task that we are connected
                                             if let Some(tx) = connected_tx.take() {
-                                                tx.send(()).unwrap();
+                                                tx.send(Ok(())).unwrap();
                                             }
                                         }
                                         Packet::Publish(publish) => {
@@ -145,6 +145,10 @@ impl MqttClient {
                                 }
                                 Err(e) => {
                                     eprintln!("MQTT error: {:?}", e);
+
+                                    if let Some(tx) = connected_tx.take() {
+                                        tx.send(Err(e)).unwrap();
+                                    }
                                     break;
                                 }
                             }
@@ -171,7 +175,10 @@ impl MqttClient {
         });
 
         // Wait for connection to be established
-        connected_rx.await.unwrap();
+        match connected_rx.await.unwrap() {
+            Ok(()) => {}
+            Err(e) => return Err(e.into()),
+        }
 
         Ok(handle)
     }
