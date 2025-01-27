@@ -17,6 +17,8 @@ rustls = "0.23.21"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
 smallvec = "1.13.2"
+smol_str = { version = "0.3.2", features = ["serde"] }
+thiserror = "2.0.11"
 tokio = { version = "1.43.0", features = ["net", "rt", "sync", "io-util", "rt-multi-thread", "tokio-macros"] }
 tokio-rustls = { version = "0.26.1", default-features = false, features = ["tls12", "logging"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }

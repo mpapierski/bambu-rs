@@ -110,11 +110,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             // Start
-            client.start().await.unwrap();
+            match client.start().await {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Error connecting to MQTT broker: {}", e);
+                    return;
+                }
+            }
 
             println!("Connected to MQTT broker!");
 
-            // Simulate doing other things for 20 seconds
+            let response = client.get_version().await.unwrap();
+            println!("Version: {:?}", response);
+
             time::sleep(Duration::from_secs(20)).await;
 
             // Stop

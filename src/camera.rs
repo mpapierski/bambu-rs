@@ -13,7 +13,7 @@ use tokio_util::codec::Framed;
 
 use crate::tls::NoVerifier;
 
-/// Asynchronous camera client, loosely mirroring the Python example.
+/// Asynchronous camera client.
 pub struct CameraClient {
     hostname: String,
     port: u16,
