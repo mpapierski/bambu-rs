@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod config;
+pub mod file;
 pub mod mqtt;
 pub(crate) mod tls;
 pub mod utils;
@@ -127,6 +128,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Stop
             client.stop().await.unwrap();
+        }
+    });
+
+    tokio::spawn({
+        let config = config.clone();
+        let file = file::FileClient::new(config.printer_ip.clone(), config.access_code.clone());
+
+        async move {
+            let result = file.get_files("/").await.unwrap();
+            for file in result {
+                println!("{file:?}");
+            }
         }
     });
 

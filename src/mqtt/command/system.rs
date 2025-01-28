@@ -10,7 +10,7 @@ pub struct SystemPayload {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "command")]
+#[serde(tag = "command", rename = "ledctrl")]
 /// "ledctrl" for turning on/off the chamber light, etc.
 pub struct LedCtrl {
     pub led_node: LedNode,
@@ -25,11 +25,12 @@ pub struct LedCtrl {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "command")]
 pub enum SystemCommand {
-    #[serde(rename = "ledctrl")]
     LedCtrl(LedCtrl),
     /// "get_accessories"
     #[serde(rename = "get_accessories")]
-    GetAccessories { accessory_type: AccessoryType },
+    GetAccessories {
+        accessory_type: AccessoryType,
+    },
 }
 
 /// Instead of `led_node` being a &str, we define a small enum for valid LED nodes.

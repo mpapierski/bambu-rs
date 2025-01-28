@@ -6,20 +6,21 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.95"
 async-stream = "0.3.6"
+async-tls = "0.13.0"
 axum = "0.8.1"
 bytes = "1.9.0"
+chrono = "0.4.39"
 futures-core = "0.3.31"
 futures-util = "0.3.31"
 memchr = "2.7.4"
 once_cell = "1.20.2"
 rumqttc = { git = "https://github.com/bytebeamio/rumqtt/", branch = "main" }
-rustls = "0.23.21"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
 smallvec = "1.13.2"
 smol_str = { version = "0.3.2", features = ["serde"] }
 thiserror = "2.0.11"
-tokio = { version = "1.43.0", features = ["net", "rt", "sync", "io-util", "rt-multi-thread", "tokio-macros"] }
+tokio = { version = "1.43.0", features = ["net", "rt", "sync", "io-util", "fs", "rt-multi-thread", "tokio-macros"] }
 tokio-rustls = { version = "0.26.1", default-features = false, features = ["tls12", "logging"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 tokio-util = { version = "0.7.13", features = ["codec"] }

@@ -3,12 +3,15 @@ mod codec;
 use std::sync::Arc;
 
 use codec::JpegCodec;
-use rustls::{
-    pki_types::{IpAddr, ServerName},
-    ClientConfig,
-};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
-use tokio_rustls::{client::TlsStream, TlsConnector};
+use tokio_rustls::{
+    client::TlsStream,
+    rustls::{
+        pki_types::{IpAddr, ServerName},
+        ClientConfig,
+    },
+    TlsConnector,
+};
 use tokio_util::codec::Framed;
 
 use crate::tls::NoVerifier;

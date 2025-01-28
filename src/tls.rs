@@ -1,4 +1,4 @@
-use rustls::{
+use tokio_rustls::rustls::{
     client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
     pki_types::{CertificateDer, ServerName, UnixTime},
     DigitallySignedStruct, Error, SignatureScheme,
