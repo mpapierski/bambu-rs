@@ -14,7 +14,7 @@ chrono = "0.4.39"
 futures-core = "0.3.31"
 futures-util = {version = "0.3.31", features = ["sink"] }
 memchr = "2.7.4"
-rumqttc = { version = "0.24.0", git = "https://github.com/bytebeamio/rumqtt/", branch = "main" }
+rumqttc = "0.24.0"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
 smallvec = "1.13.2"
