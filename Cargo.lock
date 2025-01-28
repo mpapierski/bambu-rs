@@ -183,7 +183,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bambu-proxy"
+name = "bambu"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -195,7 +195,6 @@ dependencies = [
  "futures-core",
  "futures-util",
  "memchr",
- "once_cell",
  "rumqttc",
  "serde",
  "serde_json",

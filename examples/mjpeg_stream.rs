@@ -1,10 +1,3 @@
-pub mod camera;
-pub mod config;
-pub mod file;
-pub mod mqtt;
-pub(crate) mod tls;
-pub mod utils;
-
 use async_stream::try_stream;
 use axum::{
     body::{Body, Bytes},
@@ -14,19 +7,53 @@ use axum::{
     routing::get,
     Router,
 };
-use camera::CameraClient;
-use config::Config;
+use bambu::CameraClient;
 use futures_core::Stream;
 use futures_util::StreamExt;
-use mqtt::MqttClient;
-use std::{convert::Infallible, net::SocketAddr, sync::Arc, time::Duration};
+use std::{convert::Infallible, net::SocketAddr, sync::Arc};
 use tokio::{
     sync::{
         broadcast::{self, Receiver},
         RwLock,
     },
-    time,
+    task,
 };
+use turbojpeg::DecompressHeader;
+
+async fn read_jpeg_header(jpeg_frame_bytes: Bytes) -> turbojpeg::Result<DecompressHeader> {
+    task::spawn_blocking(move || turbojpeg::read_header(&jpeg_frame_bytes))
+        .await
+        .unwrap()
+}
+
+pub(crate) struct Config {
+    pub(crate) printer_ip: String,
+    pub(crate) access_code: String,
+    #[allow(dead_code)]
+    pub(crate) serial_number: String,
+    pub(crate) camera_port: u16,
+}
+
+impl Config {
+    pub(crate) fn from_env() -> Self {
+        let printer_ip = std::env::var("BAMBU_IP").expect("BAMBU_IP must be set");
+        let access_code =
+            std::env::var("BAMBU_ACCESS_CODE").expect("BAMBU_ACCESS_CODE must be set");
+        let serial_number =
+            std::env::var("BAMBU_SERIAL_NUMBER").expect("BAMBU_SERIAL_NUMBER must be set");
+        let camera_port: u16 = std::env::var("BAMBU_PORT")
+            .unwrap_or_else(|_| "6000".to_string())
+            .parse()
+            .expect("BAMBU_PORT must be a valid u16");
+
+        Self {
+            printer_ip,
+            access_code,
+            serial_number,
+            camera_port,
+        }
+    }
+}
 
 const BOUNDARY: &str = "donotcrossboundary";
 
@@ -70,14 +97,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("Received a JPEG frame of length {}", jpeg_frame_bytes.len());
 
                         // Decode image
-                        let jpeg_header =
-                            match utils::read_jpeg_header(jpeg_frame_bytes.clone()).await {
-                                Ok(img) => img,
-                                Err(e) => {
-                                    eprintln!("Error decoding image: {}", e);
-                                    continue;
-                                }
-                            };
+                        let jpeg_header = match read_jpeg_header(jpeg_frame_bytes.clone()).await {
+                            Ok(img) => img,
+                            Err(e) => {
+                                eprintln!("Error decoding image: {}", e);
+                                continue;
+                            }
+                        };
 
                         println!(
                             "Image dimensions: {}x{}",
@@ -97,48 +123,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     Err(e) => eprintln!("Error receiving frame: {}", e),
                 }
-            }
-        }
-    });
-
-    tokio::spawn({
-        let config = config.clone();
-        async move {
-            let mut client = MqttClient::new(
-                &config.printer_ip,
-                &config.access_code,
-                &config.serial_number,
-            );
-
-            // Start
-            match client.start().await {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("Error connecting to MQTT broker: {}", e);
-                    return;
-                }
-            }
-
-            println!("Connected to MQTT broker!");
-
-            let response = client.get_version().await.unwrap();
-            println!("Version: {:?}", response);
-
-            time::sleep(Duration::from_secs(20)).await;
-
-            // Stop
-            client.stop().await.unwrap();
-        }
-    });
-
-    tokio::spawn({
-        let config = config.clone();
-        let file = file::FileClient::new(config.printer_ip.clone(), config.access_code.clone());
-
-        async move {
-            let result = file.get_files("/").await.unwrap();
-            for file in result {
-                println!("{file:?}");
             }
         }
     });

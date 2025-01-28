@@ -1,14 +1,10 @@
+//! A module for interacting with BambuLab file server.
 pub(crate) mod ftp;
 
 use std::io;
 
 use crate::tls::NoVerifier;
 use ftp::{metadata::FileMetadata, FtpClient};
-
-#[derive(Debug)]
-pub enum FtpError {
-    Foo,
-}
 
 /// An async FTPS file client, similar to the Python version using curl.
 /// It can list files in a directory and download specific files.
