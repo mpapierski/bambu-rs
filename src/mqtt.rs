@@ -140,6 +140,10 @@ impl MqttClient {
                                             let payload = publish.payload;
 
                                             match serde_json::from_slice::<Message>(&payload) {
+                                                Ok(Message::Print(print)) if print.command == "push_status" => {
+                                                    // Pushed message for which there is no inflight command.
+                                                    println!("Received pushed message from {topic}: {:?}", print);
+                                                }
                                                 Ok(msg) => {
                                                     // Handle the message here.
                                                     let mut inflight_commands = Arc::clone(&inflight_commands).lock_owned().await;
@@ -152,7 +156,7 @@ impl MqttClient {
                                                             inflight_command.send(msg).unwrap();
                                                         }
                                                         None => {
-                                                            eprintln!("Received message with unknown sequence_id: {:?}", msg.sequence_id());
+                                                            eprintln!("Received message with unknown sequence_id: {msg:?}");
                                                         }
                                                     }
 
