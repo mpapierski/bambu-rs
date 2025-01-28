@@ -2,6 +2,8 @@
 name = "bambu"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
+description = "Rust crate that provides a high-level API for interacting with the BambuLab 3D printers."
 
 [dependencies]
 anyhow = "1.0.95"
@@ -10,9 +12,9 @@ async-tls = "0.13.0"
 bytes = "1.9.0"
 chrono = "0.4.39"
 futures-core = "0.3.31"
-futures-util = "0.3.31"
+futures-util = {version = "0.3.31", features = ["sink"] }
 memchr = "2.7.4"
-rumqttc = { git = "https://github.com/bytebeamio/rumqtt/", branch = "main" }
+rumqttc = { version = "0.24.0", git = "https://github.com/bytebeamio/rumqtt/", branch = "main" }
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
 smallvec = "1.13.2"

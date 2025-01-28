@@ -1,4 +1,4 @@
-pub(crate) mod command;
+pub mod command;
 pub mod message;
 
 use std::{collections::HashMap, sync::Arc};
@@ -9,10 +9,16 @@ use command::{
     system::{LedCtrl, LedMode, LedNode, SystemCommand, SystemPayload},
     Command,
 };
+use rumqttc::tokio_rustls::rustls::{
+    client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    pki_types::{CertificateDer, ServerName, UnixTime},
+    DigitallySignedStruct, Error, SignatureScheme,
+};
 use rumqttc::{
     tokio_rustls::rustls::ClientConfig, AsyncClient, ClientError, Event, MqttOptions, Packet, QoS,
     TlsConfiguration, Transport,
 };
+
 use smol_str::{format_smolstr, SmolStr};
 use thiserror::Error;
 use tokio::{
@@ -21,8 +27,60 @@ use tokio::{
     time::Duration,
 };
 
-use crate::tls::NoVerifier;
 use message::{info::Info, system::System, Message};
+
+/// NOTE: I had to duplicate this due to crate version mismatch. Once rumqttc is updated, this can be removed.
+#[derive(Debug)]
+pub(crate) struct RumqttcNoVerifier;
+
+impl ServerCertVerifier for RumqttcNoVerifier {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &CertificateDer,
+        _intermediates: &[CertificateDer],
+        _server_name: &ServerName,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<ServerCertVerified, Error> {
+        Ok(ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        _message: &[u8],
+        _cert: &CertificateDer,
+        _dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, Error> {
+        Ok(HandshakeSignatureValid::assertion())
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        _message: &[u8],
+        _cert: &CertificateDer,
+        _dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, Error> {
+        Ok(HandshakeSignatureValid::assertion())
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        vec![
+            SignatureScheme::RSA_PKCS1_SHA1,
+            SignatureScheme::ECDSA_SHA1_Legacy,
+            SignatureScheme::RSA_PKCS1_SHA256,
+            SignatureScheme::ECDSA_NISTP256_SHA256,
+            SignatureScheme::RSA_PKCS1_SHA384,
+            SignatureScheme::ECDSA_NISTP384_SHA384,
+            SignatureScheme::RSA_PKCS1_SHA512,
+            SignatureScheme::ECDSA_NISTP521_SHA512,
+            SignatureScheme::RSA_PSS_SHA256,
+            SignatureScheme::RSA_PSS_SHA384,
+            SignatureScheme::RSA_PSS_SHA512,
+            SignatureScheme::ED25519,
+            SignatureScheme::ED448,
+        ]
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum MqttError {
@@ -82,7 +140,7 @@ impl MqttClient {
         // rumqttc uses rustls internally. We'll supply a dangerous configuration.
         let config: ClientConfig = ClientConfig::builder()
             .dangerous()
-            .with_custom_certificate_verifier(Arc::new(NoVerifier))
+            .with_custom_certificate_verifier(Arc::new(RumqttcNoVerifier))
             .with_no_client_auth();
 
         mqttoptions.set_transport(Transport::Tls(TlsConfiguration::Rustls(Arc::new(config))));
