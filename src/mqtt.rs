@@ -6,6 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 use command::{
     info::{InfoCommand, InfoPayload},
+    print::{PrintCommand, PrintPayload},
     system::{LedCtrl, LedMode, LedNode, SystemCommand, SystemPayload},
     Command,
 };
@@ -339,6 +340,24 @@ impl MqttClient {
         };
         let result = self.send_command_and_wait(command).await?;
         Ok(result)
+    }
+
+    /// Request for printer to push all data to the client.
+    pub async fn extrusion_calibration_get(
+        &mut self,
+        filament_id: impl Into<SmolStr>,
+        nozzle_diameter: impl Into<SmolStr>,
+    ) -> Result<Message, MqttError> {
+        let command = Command::Print {
+            print: PrintPayload {
+                sequence_id: self.next_sequence_id().await,
+                command: PrintCommand::ExtrusionCalibrationGet {
+                    filament_id: filament_id.into(),
+                    nozzle_diameter: nozzle_diameter.into(),
+                },
+            },
+        };
+        self.send_raw_command_and_wait(command).await
     }
 
     /// Set the lights on or off on the printer.

@@ -258,4 +258,20 @@ mod tests {
         });
         assert_eq!(actual, expected);
     }
+
+    #[test]
+
+    fn test_extrusion_cali_get() {
+        let expected = json!({"print":{"command":"extrusion_cali_get","filament_id":"","nozzle_diameter":"0","sequence_id":"20005"}});
+        let actual = Command::Print {
+            print: PrintPayload {
+                sequence_id: "20005".into(),
+                command: PrintCommand::ExtrusionCalibrationGet {
+                    filament_id: "".into(),
+                    nozzle_diameter: "0".into(),
+                },
+            },
+        };
+        assert_eq!(serde_json::to_value(&actual).unwrap(), expected);
+    }
 }

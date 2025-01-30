@@ -27,4 +27,10 @@ pub enum PrintCommand {
     // "gcode_line" -> has param
     #[serde(rename = "gcode_line")]
     GcodeLine { param: SmolStr },
+    // "extrusion_cali_get" -> has param
+    #[serde(rename = "extrusion_cali_get")]
+    ExtrusionCalibrationGet {
+        filament_id: SmolStr,
+        nozzle_diameter: SmolStr,
+    },
 }

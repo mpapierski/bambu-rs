@@ -160,6 +160,7 @@ mod tests {
             }
         });
 
-        let _message = serde_json::from_value::<Message>(payload).unwrap();
+        let message = serde_json::from_value::<Message>(payload).unwrap();
+        dbg!(message);
     }
 }
