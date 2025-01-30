@@ -7,7 +7,7 @@ use axum::{
     routing::get,
     Router,
 };
-use bambu::CameraClient;
+use bambu::{CameraClient, CameraPacket};
 use futures_core::Stream;
 use futures_util::StreamExt;
 use std::{convert::Infallible, net::SocketAddr, sync::Arc};
@@ -93,7 +93,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Consume frames in a loop
             while let Some(jpeg_frame_bytes) = frame_stream.next().await {
                 match jpeg_frame_bytes {
-                    Ok(jpeg_frame_bytes) => {
+                    Ok(CameraPacket::Auth { .. }) => {
+                        unreachable!("Auth packet should not be received here");
+                    }
+                    Ok(CameraPacket::Jpeg(jpeg_frame_bytes)) => {
                         println!("Received a JPEG frame of length {}", jpeg_frame_bytes.len());
 
                         // Decode image
@@ -124,6 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(e) => eprintln!("Error receiving frame: {}", e),
                 }
             }
+            println!("Camera connection closed");
         }
     });
 

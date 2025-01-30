@@ -1,9 +1,11 @@
-mod codec;
+pub mod codec;
 
 use std::sync::Arc;
 
-use codec::JpegCodec;
-use tokio::{io::AsyncWriteExt, net::TcpStream};
+use codec::{CameraPacket, JpegCodec};
+use futures_util::SinkExt;
+use smol_str::SmolStr;
+use tokio::net::TcpStream;
 use tokio_rustls::{
     client::TlsStream,
     rustls::{
@@ -17,33 +19,6 @@ use tokio_util::codec::Framed;
 use crate::tls::NoVerifier;
 
 const DEFAULT_CAMERA_USERNAME: &str = "bblp";
-
-/// Build the authentication packet
-fn create_auth_packet(username: &str, access_code: &str) -> Vec<u8> {
-    let mut auth_data = Vec::new();
-
-    // Auth packet: 0x40, 0x3000, 0, 0 + username + access_code (padded)
-    auth_data.extend_from_slice(&0x40u32.to_le_bytes()); // '@'
-    auth_data.extend_from_slice(&0x3000u32.to_le_bytes()); // '0' with some offset
-    auth_data.extend_from_slice(&0u32.to_le_bytes());
-    auth_data.extend_from_slice(&0u32.to_le_bytes());
-
-    // Write username (up to 32 bytes, padded with zeros)
-    let mut username_bytes = [0u8; 32];
-    let username_utf8 = username.as_bytes();
-    let len = username_utf8.len().min(32);
-    username_bytes[..len].copy_from_slice(&username_utf8[..len]);
-    auth_data.extend_from_slice(&username_bytes);
-
-    // Write access_code (up to 32 bytes, padded with zeros)
-    let mut access_bytes = [0u8; 32];
-    let code_utf8 = access_code.as_bytes();
-    let len = code_utf8.len().min(32);
-    access_bytes[..len].copy_from_slice(&code_utf8[..len]);
-    auth_data.extend_from_slice(&access_bytes);
-
-    auth_data
-}
 
 /// Asynchronous camera client.
 pub struct CameraClient {
@@ -71,6 +46,8 @@ impl CameraClient {
         let addr = format!("{}:{}", self.hostname, self.port);
         let tcp_stream = TcpStream::connect(&addr).await?;
 
+        // CryptoProvider::install();
+
         // 2) Create a rustls ClientConfig
         let config = ClientConfig::builder()
             .dangerous()
@@ -81,21 +58,24 @@ impl CameraClient {
         let connector = TlsConnector::from(config);
 
         // 3) Wrap in tokio-rustls for async TLS
-        // let dnsname = DNSNameRef::try_from_ascii_str(&self.hostname)?;
         let ip_address = IpAddr::try_from(self.hostname.as_str()).unwrap();
-        let mut tls_stream = connector
+        let tls_stream = connector
             .connect(ServerName::IpAddress(ip_address), tcp_stream)
             .await?;
 
-        // 4) Send auth data first
-        let auth_packet = create_auth_packet(DEFAULT_CAMERA_USERNAME, &self.access_code);
-        tls_stream.write_all(&auth_packet).await?;
+        // 4) Wrap with Framed + JpegCodec
+        let mut framed = Framed::new(tls_stream, JpegCodec::default());
 
+        // 5) Send auth data first
+        framed
+            .send(CameraPacket::Auth {
+                username: DEFAULT_CAMERA_USERNAME.into(),
+                access_code: SmolStr::from(self.access_code.clone()),
+            })
+            .await?;
         // Flush to ensure the server receives it
-        tls_stream.flush().await?;
+        framed.flush().await?;
 
-        // 5) Wrap with Framed + JpegCodec
-        let framed = Framed::new(tls_stream, JpegCodec::default());
         Ok(framed)
     }
 }

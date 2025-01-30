@@ -45,14 +45,5 @@ async fn main() {
 
     println!("Client started");
 
-    // let request = client.get_version().await.expect("Get version failed");
-    // println!("Get version: {:?}", request);
-
-    // let message = client
-    //     .extrusion_calibration_get("", "0")
-    //     .await
-    //     .expect("Push all failed");
-    // println!("Push all: {:?}", message);
-
     task.await.expect("Task failed");
 }

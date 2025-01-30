@@ -21,7 +21,7 @@ smallvec = "1.13.2"
 smol_str = { version = "0.3.2", features = ["serde"] }
 thiserror = "2.0.11"
 tokio = { version = "1.43.0", features = ["net", "rt", "sync", "io-util", "fs", "rt-multi-thread", "tokio-macros"] }
-tokio-rustls = { version = "0.26.1", default-features = false, features = ["tls12", "logging"] }
+tokio-rustls = { version = "0.26.1", features = ["tls12", "logging"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 tokio-util = { version = "0.7.13", features = ["codec"] }
 
