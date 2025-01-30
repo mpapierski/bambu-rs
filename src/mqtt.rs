@@ -7,6 +7,7 @@ use anyhow::Result;
 use command::{
     info::{InfoCommand, InfoPayload},
     print::{PrintCommand, PrintPayload},
+    pushing::{PushingCommand, PushingPayload},
     system::{LedCtrl, LedMode, LedNode, SystemCommand, SystemPayload},
     Command,
 };
@@ -282,6 +283,26 @@ impl MqttClient {
         Ok(())
     }
 
+    pub(crate) async fn send_raw_command(&mut self, command: Command) -> Result<(), MqttError> {
+        // Serialize the command
+        let payload = serde_json::to_vec(&command)?;
+
+        // Publish the command
+        let topic = format!("device/{}/request", self.serial);
+        let qos = QoS::AtMostOnce;
+
+        eprintln!(
+            "Publishing command to {}: {}",
+            topic,
+            String::from_utf8_lossy(&payload)
+        );
+
+        let client = Arc::clone(self.client.as_ref().unwrap());
+        client.publish(topic, qos, false, payload).await?;
+
+        Ok(())
+    }
+
     /// Send a command to the printer.
     pub(crate) async fn send_raw_command_and_wait(
         &mut self,
@@ -340,6 +361,19 @@ impl MqttClient {
         };
         let result = self.send_command_and_wait(command).await?;
         Ok(result)
+    }
+
+    pub async fn push_all(&mut self) -> Result<(), MqttError> {
+        let command = Command::Pushing {
+            pushing: PushingPayload {
+                sequence_id: self.next_sequence_id().await,
+                command: PushingCommand::PushAll {
+                    push_target: 1,
+                    version: 1,
+                },
+            },
+        };
+        self.send_raw_command(command).await
     }
 
     /// Request for printer to push all data to the client.

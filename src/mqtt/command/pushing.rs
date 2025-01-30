@@ -13,7 +13,7 @@ pub struct PushingPayload {
 #[serde(tag = "command")]
 pub enum PushingCommand {
     #[serde(rename = "pushall")]
-    PushAll,
+    PushAll { push_target: u64, version: u64 },
 
     #[serde(rename = "start")]
     Start,

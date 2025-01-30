@@ -41,16 +41,18 @@ async fn main() {
     );
     let task = client.start().await.expect("Start failed");
 
+    client.push_all().await.expect("foo");
+
     println!("Client started");
 
-    let request = client.get_version().await.expect("Get version failed");
-    println!("Get version: {:?}", request);
+    // let request = client.get_version().await.expect("Get version failed");
+    // println!("Get version: {:?}", request);
 
-    let message = client
-        .extrusion_calibration_get("", "0")
-        .await
-        .expect("Push all failed");
-    println!("Push all: {:?}", message);
+    // let message = client
+    //     .extrusion_calibration_get("", "0")
+    //     .await
+    //     .expect("Push all failed");
+    // println!("Push all: {:?}", message);
 
     task.await.expect("Task failed");
 }

@@ -127,14 +127,19 @@ mod tests {
         let cmd = Command::Pushing {
             pushing: PushingPayload {
                 sequence_id: "555".into(),
-                command: PushingCommand::PushAll,
+                command: PushingCommand::PushAll {
+                    push_target: 0,
+                    version: 0,
+                },
             },
         };
         let actual = serde_json::to_value(&cmd).unwrap();
         let expected = json!({
             "pushing": {
                 "sequence_id": "555",
-                "command": "pushall"
+                "command": "pushall",
+                "push_target": 0,
+                "version": 0
             }
         });
         assert_eq!(actual, expected);
