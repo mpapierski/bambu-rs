@@ -1,6 +1,6 @@
 [package]
 name = "bambu"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license-file = "LICENSE"
 description = "Rust crate that provides a high-level API for interacting with the BambuLab 3D printers."
